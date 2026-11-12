@@ -1,0 +1,18 @@
+{
+  "name": "Lady Barbershop · Mi agenda",
+  "short_name": "Mi agenda",
+  "description": "Citas, días y fotos de Lady Barbershop",
+  "id": "/panel",
+  "start_url": "/panel",
+  "scope": "/panel",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6F1E7",
+  "theme_color": "#1E2B45",
+  "lang": "es",
+  "icons": [
+    { "src": "/panel-icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/panel-icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/panel-icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
