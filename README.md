@@ -18,7 +18,7 @@ Al iniciar por primera vez se crean servicios de ejemplo. **Los precios son de e
 
 ## 📱 App del celular para la administradora (`/panel`)
 
-App web instalable (PWA) pensada para iPhone. La administradora solo usa esto; el panel completo (`/admin`) queda para ti en la PC.
+App web instalable (PWA) para **iPhone y Android**. La administradora solo usa esto; el panel completo (`/admin`) queda para ti en la PC.
 
 - **Citas:** nuevas por confirmar, hoy, mañana y próximos días. Botones grandes: *Confirmar*, *WhatsApp* (mensaje de confirmación ya escrito), *Ya vino*, *No vino*, *Cancelar*, *Llamar*. Botón **Agregar cita** para reservas por WhatsApp o en persona.
 - **Días:** calendario; toca un día para **cerrarlo** (o vacaciones hasta una fecha) o **abrirlo**.
@@ -28,14 +28,18 @@ App web instalable (PWA) pensada para iPhone. La administradora solo usa esto; e
 
 **Avisos:** cada reserva o mensaje nuevo desde la web envía una notificación push (“💈 ¡Nueva reserva! Ana · viernes 13 de noviembre a las 10:00 a. m. …”) y pone un numerito en el ícono con las citas por confirmar.
 
-### Instalarla en el iPhone de la administradora (una sola vez)
+### Instalarla en el teléfono de la administradora (una sola vez)
+
+**iPhone (Safari):**
 
 1. Abrir `https://TU-DOMINIO/panel` en **Safari**.
 2. Compartir → **Agregar a inicio** → Agregar.
 3. Abrir **“Mi agenda”** desde el ícono, iniciar sesión (dura 60 días) y tocar **Activar avisos** → Permitir.
 4. En **Más** → “Enviarme un aviso de prueba”.
 
-Requisitos: iOS 16.4 o más reciente, sitio publicado con **HTTPS** (los avisos no funcionan en `localhost` desde el teléfono) y las claves `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en el `.env` del servidor.
+**Android (Chrome):** abrir `/panel` → botón **Instalar la app** (o menú ⋮ → *Instalar app*) → abrir “Mi agenda” → **Activar avisos** → Permitir.
+
+Requisitos: iOS 16.4+ en iPhone o Chrome en Android, sitio publicado con **HTTPS** (los avisos no funcionan en `localhost` desde el teléfono) y las claves `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en el `.env` del servidor.
 
 ## Panel pensado para usarse sin conocimientos técnicos
 

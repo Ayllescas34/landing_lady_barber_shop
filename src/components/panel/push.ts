@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { savePushSubscription } from '@/app/(panel)/panel/actions'
 
 export function isStandalone() {
@@ -13,6 +14,63 @@ export function isStandalone() {
 export function isIOS() {
   if (typeof navigator === 'undefined') return false
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+export function isAndroid() {
+  if (typeof navigator === 'undefined') return false
+  return /android/i.test(navigator.userAgent)
+}
+
+/** Texto para cuando el permiso de avisos está bloqueado, según el teléfono. */
+export function deniedHelp() {
+  if (isIOS()) return 'Ve a Ajustes del iPhone → Notificaciones → Mi agenda y activa "Permitir notificaciones".'
+  if (isAndroid())
+    return isStandalone()
+      ? 'Mantén presionado el ícono de "Mi agenda" → Información de la app → Notificaciones → Activar.'
+      : 'Toca el candado 🔒 junto a la dirección (arriba) → Permisos → Notificaciones → Permitir.'
+  return 'Permite las notificaciones de este sitio en la configuración del navegador.'
+}
+
+/* ---------- Instalar en Android (Chrome) ---------- */
+
+type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
+declare global {
+  interface Window {
+    __lbInstallPrompt?: InstallEvent | null
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    window.__lbInstallPrompt = e as InstallEvent
+    window.dispatchEvent(new Event('lb-install-ready'))
+  })
+  window.addEventListener('appinstalled', () => {
+    window.__lbInstallPrompt = null
+    window.dispatchEvent(new Event('lb-install-ready'))
+  })
+}
+
+/** En Android/Chrome permite mostrar un botón "Instalar app" propio. */
+export function useInstallPrompt() {
+  const [canInstall, setCanInstall] = useState(false)
+  useEffect(() => {
+    const update = () => setCanInstall(Boolean(window.__lbInstallPrompt))
+    update()
+    window.addEventListener('lb-install-ready', update)
+    return () => window.removeEventListener('lb-install-ready', update)
+  }, [])
+  async function install() {
+    const ev = window.__lbInstallPrompt
+    if (!ev) return false
+    await ev.prompt()
+    const { outcome } = await ev.userChoice
+    window.__lbInstallPrompt = null
+    setCanInstall(false)
+    return outcome === 'accepted'
+  }
+  return { canInstall, install }
 }
 
 export function pushSupported() {
@@ -57,17 +115,16 @@ export async function enablePush(vapidKey: string): Promise<{ ok: true } | { ok:
       ok: false,
       error: isIOS()
         ? 'Primero instala la app: toca Compartir ⬆️ y luego "Agregar a inicio". Ábrela desde el ícono e intenta otra vez.'
-        : 'Este navegador no permite avisos.',
+        : isAndroid()
+          ? 'Abre esta página en Google Chrome para poder recibir avisos.'
+          : 'Este navegador no permite avisos.',
     }
   }
   if (!vapidKey) return { ok: false, error: 'Faltan las claves de avisos en el servidor.' }
 
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') {
-    return {
-      ok: false,
-      error: 'No diste permiso. Ve a Ajustes del iPhone → Notificaciones → Mi agenda y actívalas.',
-    }
+    return { ok: false, error: `No diste permiso. ${deniedHelp()}` }
   }
   const reg = (await registerSW()) || (await navigator.serviceWorker.ready)
   await navigator.serviceWorker.ready
