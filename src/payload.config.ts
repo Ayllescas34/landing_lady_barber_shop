@@ -2,6 +2,7 @@ import { buildConfig } from 'payload'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -34,6 +35,11 @@ const dirname = path.dirname(filename)
 // - Local: si no hay URL de Postgres, se usa un archivo SQLite (barber.db).
 const databaseUrl = process.env.DATABASE_URI || process.env.DATABASE_URL || process.env.POSTGRES_URL || ''
 const isPostgres = /^postgres(ql)?:\/\//.test(databaseUrl)
+
+// Correo (avisos a clientes y "olvidé mi contraseña"). Funciona con cualquier SMTP:
+// Gmail con contraseña de aplicación, Resend, Brevo, etc. Sin SMTP_HOST los correos
+// solo se escriben en la consola (útil en local).
+const smtpReady = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
 
 const secret = process.env.PAYLOAD_SECRET
 if (!secret && process.env.NODE_ENV === 'production') {
@@ -115,6 +121,19 @@ export default buildConfig({
       clientUploads: true,
     }),
   ],
+  email: smtpReady
+    ? nodemailerAdapter({
+        defaultFromAddress: process.env.EMAIL_FROM_ADDRESS || process.env.SMTP_USER || '',
+        defaultFromName: process.env.EMAIL_FROM_NAME || 'Lady Barbershop',
+        skipVerify: true,
+        transportOptions: {
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT || 465),
+          secure: Number(process.env.SMTP_PORT || 465) === 465,
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        },
+      })
+    : undefined,
   secret: secret || 'solo-para-desarrollo-local',
   sharp,
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },

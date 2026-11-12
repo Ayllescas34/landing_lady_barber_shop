@@ -141,6 +141,9 @@ export default function BookingWizard({
         </div>
         <h2 className="mt-5 font-display text-3xl text-navy">¡Cita solicitada!</h2>
         <p className="mx-auto mt-3 max-w-md text-ink/75">{result.message}</p>
+        <p className="mx-auto mt-2 max-w-md text-sm text-ink/60">
+          📧 Te enviamos los detalles a tu correo. Ahí también puedes cancelar si no puedes asistir.
+        </p>
         <dl className="mx-auto mt-8 grid max-w-md gap-3 rounded-2xl bg-paper p-5 text-left text-sm">
           <Row label="Servicio" value={service.name} />
           {barber && <Row label="Con" value={barber.name} />}
@@ -325,8 +328,8 @@ export default function BookingWizard({
               <input id="bk-phone" name="phone" type="tel" required className="input" autoComplete="tel" inputMode="tel" placeholder="5555 1234" />
             </div>
             <div>
-              <label className="label" htmlFor="bk-email">Correo (opcional)</label>
-              <input id="bk-email" name="email" type="email" className="input" autoComplete="email" />
+              <label className="label" htmlFor="bk-email">Correo *</label>
+              <input id="bk-email" name="email" type="email" required className="input" autoComplete="email" placeholder="Para enviarte la confirmación" />
             </div>
             <div className="sm:col-span-2">
               <label className="label" htmlFor="bk-notes">Comentarios (opcional)</label>

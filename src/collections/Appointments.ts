@@ -1,6 +1,8 @@
 import type { CollectionConfig } from 'payload'
 import { TIME_OPTIONS, dateKeyFromISO, formatDateLong, formatTime12 } from '../lib/time'
 import { notifyAdmins } from '../lib/push'
+import { sendAppointmentEmail } from '../lib/emails'
+import crypto from 'crypto'
 
 export const APPOINTMENT_STATUS = [
   { label: '🟡 Pendiente', value: 'pending' },
@@ -52,6 +54,17 @@ export const Appointments: CollectionConfig = {
           }
         }
         if (!data.code && !originalDoc?.code) data.code = makeCode()
+        // Clave secreta para el enlace "Ver o cancelar mi cita" del correo
+        if (!data.manageToken && !originalDoc?.manageToken) data.manageToken = crypto.randomBytes(16).toString('hex')
+        // Quién canceló (para el correo correcto)
+        if (data.status === 'cancelled' && originalDoc?.status !== 'cancelled' && !data.cancelledBy) {
+          data.cancelledBy = 'business'
+        }
+        if (data.status && data.status !== 'cancelled') data.cancelledBy = null
+        // Si cambia el día o la hora, el recordatorio se vuelve a enviar
+        if (originalDoc && (data.dateKey !== originalDoc.dateKey || (data.time && data.time !== originalDoc.time))) {
+          data.reminderSent = false
+        }
 
         const name = data.customerName ?? originalDoc?.customerName ?? ''
         const time = data.time ?? originalDoc?.time
@@ -60,20 +73,60 @@ export const Appointments: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, operation, req }) => {
-        // Aviso al teléfono de la administradora cuando un cliente reserva desde la web
-        if (operation !== 'create' || doc.source !== 'web') return doc
-        let serviceName = ''
-        try {
-          const id = typeof doc.service === 'object' ? doc.service?.id : doc.service
-          if (id) serviceName = (await req.payload.findByID({ collection: 'services', id, depth: 0 })).name
-        } catch {}
-        await notifyAdmins(req.payload, {
-          title: '💈 ¡Nueva reserva!',
-          body: `${doc.customerName} · ${formatDateLong(doc.dateKey)} a las ${formatTime12(doc.time)}${serviceName ? ` · ${serviceName}` : ''}. Toca para revisar.`,
-          url: '/panel',
-          tag: `cita-${doc.id}`,
-        })
+      async ({ doc, previousDoc, operation, req, context }) => {
+        const payload = req.payload
+        const when = `${formatDateLong(doc.dateKey)} a las ${formatTime12(doc.time)}`
+
+        if (operation === 'create') {
+          if (doc.source === 'web') {
+            // Aviso al teléfono de la administradora
+            let serviceName = ''
+            try {
+              const id = typeof doc.service === 'object' ? doc.service?.id : doc.service
+              if (id) serviceName = (await payload.findByID({ collection: 'services', id, depth: 0 })).name
+            } catch {}
+            await notifyAdmins(payload, {
+              title: '💈 ¡Nueva reserva!',
+              body: `${doc.customerName} · ${when}${serviceName ? ` · ${serviceName}` : ''}. Toca para revisar.`,
+              url: '/panel',
+              tag: `cita-${doc.id}`,
+            })
+          }
+          // Correo al cliente (si dejó correo)
+          if (doc.status === 'pending') await sendAppointmentEmail(payload, 'received', doc)
+          else if (doc.status === 'confirmed') await sendAppointmentEmail(payload, 'confirmed', doc)
+          return doc
+        }
+
+        if (operation !== 'update' || !previousDoc || context?.skipEmail) return doc
+        const active = (st: string) => st === 'pending' || st === 'confirmed'
+
+        if (doc.status !== previousDoc.status) {
+          if (doc.status === 'confirmed' && previousDoc.status === 'pending') {
+            await sendAppointmentEmail(payload, 'confirmed', doc)
+          } else if (doc.status === 'confirmed' && !active(previousDoc.status)) {
+            // Reactivada después de cancelarla
+            await sendAppointmentEmail(payload, 'confirmed', doc)
+          } else if (doc.status === 'cancelled' && active(previousDoc.status)) {
+            if (doc.cancelledBy === 'client') {
+              await sendAppointmentEmail(payload, 'cancelledByClient', doc)
+              await notifyAdmins(payload, {
+                title: '❌ Cita cancelada por el cliente',
+                body: `${doc.customerName} canceló su cita del ${when}. El horario quedó libre.`,
+                url: '/panel',
+                tag: `cancel-${doc.id}`,
+              })
+            } else {
+              await sendAppointmentEmail(payload, 'cancelled', doc)
+            }
+          }
+          return doc
+        }
+
+        // Mismo estado pero cambió el día o la hora
+        if (active(doc.status) && (doc.dateKey !== previousDoc.dateKey || doc.time !== previousDoc.time)) {
+          await sendAppointmentEmail(payload, 'rescheduled', doc)
+        }
         return doc
       },
     ],
@@ -84,7 +137,12 @@ export const Appointments: CollectionConfig = {
       fields: [
         { name: 'customerName', type: 'text', label: 'Cliente', required: true },
         { name: 'phone', type: 'text', label: 'Teléfono / WhatsApp', required: true },
-        { name: 'email', type: 'email', label: 'Correo' },
+        {
+          name: 'email',
+          type: 'email',
+          label: 'Correo',
+          admin: { description: 'Si tiene correo, se le avisa al confirmar, cancelar o cambiar la cita.' },
+        },
       ],
     },
     {
@@ -156,6 +214,18 @@ export const Appointments: CollectionConfig = {
       index: true,
       admin: { position: 'sidebar', readOnly: true, description: 'Se calcula automáticamente' },
     },
+    {
+      name: 'cancelledBy',
+      type: 'select',
+      label: 'Cancelada por',
+      options: [
+        { label: 'La barbería', value: 'business' },
+        { label: 'El cliente', value: 'client' },
+      ],
+      admin: { position: 'sidebar', readOnly: true, condition: (d) => d?.status === 'cancelled' },
+    },
     { name: 'label', type: 'text', admin: { hidden: true } },
+    { name: 'manageToken', type: 'text', admin: { hidden: true } },
+    { name: 'reminderSent', type: 'checkbox', defaultValue: false, admin: { hidden: true } },
   ],
 }
