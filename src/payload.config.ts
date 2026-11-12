@@ -47,6 +47,10 @@ export default buildConfig({
       title: 'Lady Barbershop — Panel',
       description: 'Panel administrativo de Lady Barbershop Antigua',
       titleSuffix: ' · Lady Barbershop',
+      icons: {
+        icon: [{ url: '/panel-icons/icon-192.png', type: 'image/png' }],
+        apple: [{ url: '/panel-icons/apple-touch-icon.png' }],
+      },
     },
     theme: 'light',
     components: {
