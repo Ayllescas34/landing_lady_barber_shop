@@ -41,6 +41,23 @@ App web instalable (PWA) para **iPhone y Android**. La administradora solo usa e
 
 Requisitos: iOS 16.4+ en iPhone o Chrome en Android, sitio publicado con **HTTPS** (los avisos no funcionan en `localhost` desde el teléfono) y las claves `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en el `.env` del servidor.
 
+## ✉️ Correos al cliente
+
+Si la cita tiene correo (obligatorio al reservar en la web), el cliente recibe:
+
+| Cuándo | Correo |
+|---|---|
+| Reserva en la web | “Recibimos tu solicitud” (por confirmar) |
+| La barbería confirma | “Tu cita está confirmada” + botón *Agregar a mi calendario* |
+| La barbería cancela | “Tu cita fue cancelada” + *Reservar otra cita* |
+| Cambia día u hora | “Tu cita cambió” |
+| El día anterior (8:00 a. m.) | Recordatorio (Vercel Cron → `/cron/recordatorios`) |
+| El cliente cancela | “Cancelaste tu cita” + aviso push a la administradora |
+
+Cada correo trae el enlace **Ver o cancelar mi cita** (`/cita/<id>?t=<clave>`). Si el cliente cancela, el horario se libera solo.
+
+Se envían por SMTP (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`…): ver `.env.production.example`. Sin esas variables, los correos solo se escriben en la consola.
+
 ## Panel pensado para usarse sin conocimientos técnicos
 
 - **Inicio** (`/admin`): saludo, números del día, botones grandes de “¿Qué quieres hacer?”, citas de hoy y citas por confirmar con botones de *Confirmar*, *Ya se atendió*, *No vino*, *Cancelar* y *WhatsApp al cliente* (mensaje de confirmación ya escrito).

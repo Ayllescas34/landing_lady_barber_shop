@@ -1,5 +1,6 @@
 'use server'
 
+import crypto from 'crypto'
 import { headers } from 'next/headers'
 import { getPayloadClient } from '@/lib/payload'
 import { getCalendar, getSlots, loadSettings } from '@/lib/availability'
@@ -74,6 +75,7 @@ export async function bookAppointment(input: {
 
   if (name.length < 2) return { ok: false, error: 'Escribe tu nombre.' }
   if (!phoneOk(phone)) return { ok: false, error: 'Escribe un número de teléfono válido.' }
+  if (!email) return { ok: false, error: 'Escribe tu correo para enviarte la confirmación.' }
   if (!emailOk(email)) return { ok: false, error: 'El correo no es válido.' }
   if (!dateOk(date) || !timeOk(time)) return { ok: false, error: 'Elige fecha y hora.' }
 
@@ -108,7 +110,7 @@ export async function bookAppointment(input: {
     data: {
       customerName: name,
       phone,
-      email: email || undefined,
+      email,
       notes: notes || undefined,
       service: svc.id,
       barber: barberId ? Number(barberId) : undefined,
@@ -169,6 +171,31 @@ export async function sendInquiry(input: {
       message,
       status: 'new',
     },
+  })
+  return { ok: true }
+}
+
+/* ---------- El cliente cancela desde el enlace del correo ---------- */
+
+function sameToken(a: string, b: string) {
+  const ba = Buffer.from(a)
+  const bb = Buffer.from(b)
+  return ba.length === bb.length && crypto.timingSafeEqual(ba, bb)
+}
+
+export async function cancelByCustomer(id: string, token: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (await rateLimited('cancel', 10, 10 * 60_000)) return { ok: false, error: 'Demasiados intentos. Intenta más tarde.' }
+  const payload = await getPayloadClient()
+  const appt = await payload.findByID({ collection: 'appointments', id: Number(id), depth: 0 }).catch(() => null)
+  if (!appt || !appt.manageToken || !sameToken(String(token || ''), appt.manageToken))
+    return { ok: false, error: 'El enlace no es válido.' }
+  if (appt.status !== 'pending' && appt.status !== 'confirmed')
+    return { ok: false, error: 'Esta cita ya no se puede cancelar.' }
+  if ((appt.dateKey || '') < todayKey()) return { ok: false, error: 'Esta cita ya pasó.' }
+  await payload.update({
+    collection: 'appointments',
+    id: appt.id,
+    data: { status: 'cancelled', cancelledBy: 'client' },
   })
   return { ok: true }
 }

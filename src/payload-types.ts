@@ -151,6 +151,9 @@ export interface Appointment {
   id: number;
   customerName: string;
   phone: string;
+  /**
+   * Si tiene correo, se le avisa al confirmar, cancelar o cambiar la cita.
+   */
   email?: string | null;
   date: string;
   time:
@@ -237,7 +240,10 @@ export interface Appointment {
    * Se calcula automáticamente
    */
   dateKey?: string | null;
+  cancelledBy?: ('business' | 'client') | null;
   label?: string | null;
+  manageToken?: string | null;
+  reminderSent?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -774,7 +780,10 @@ export interface AppointmentsSelect<T extends boolean = true> {
   source?: T;
   code?: T;
   dateKey?: T;
+  cancelledBy?: T;
   label?: T;
+  manageToken?: T;
+  reminderSent?: T;
   updatedAt?: T;
   createdAt?: T;
 }
