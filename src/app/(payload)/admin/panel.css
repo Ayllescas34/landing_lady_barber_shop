@@ -486,3 +486,30 @@
   object-fit: cover;
   background: #fff;
 }
+
+/* Aviso para ir a la app desde el celular */
+.lb-mobile-app {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  background: var(--lb-navy);
+  color: #fff !important;
+  text-decoration: none !important;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.lb-mobile-app > span:first-child {
+  font-size: 26px;
+}
+.lb-mobile-app > span:last-child {
+  margin-left: auto;
+  font-size: 20px;
+}
+@media (max-width: 768px) {
+  .lb-mobile-app {
+    display: flex;
+  }
+}

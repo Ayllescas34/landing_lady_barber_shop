@@ -82,6 +82,15 @@ export default async function Dashboard({ payload, user }: Props) {
 
   return (
     <Gutter className="lb-page">
+      {/* Solo se ve en pantallas chicas: en el celular conviene la app "Mi agenda" */}
+      <a className="lb-mobile-app" href="/panel">
+        <span aria-hidden>📱</span>
+        <span>
+          <strong>¿Estás en el celular?</strong> Usa la app <b>“Mi agenda”</b>: es más fácil, se instala y te avisa de
+          cada reserva.
+        </span>
+        <span aria-hidden>→</span>
+      </a>
       <div className="lb-hello">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.webp" alt="" />
