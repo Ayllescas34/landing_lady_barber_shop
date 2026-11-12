@@ -176,6 +176,12 @@ function render(
 /** Envía el correo al cliente. Nunca lanza error (no debe frenar la reserva). */
 export async function sendAppointmentEmail(payload: Payload, kind: AppointmentEmailKind, a: EmailAppointment) {
   if (!a.email || !a.dateKey) return false
+  // Sin SMTP configurado no hay envío real: no lo contamos como enviado
+  // (así el recordatorio se manda cuando se configure el correo).
+  if (!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)) {
+    payload.logger.info(`Correo "${kind}" a ${a.email} no enviado: falta configurar SMTP`)
+    return false
+  }
   try {
     const [site, serviceName] = await Promise.all([
       payload.findGlobal({ slug: 'site-info', depth: 0 }).catch(() => null),
