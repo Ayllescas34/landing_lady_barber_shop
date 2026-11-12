@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-paper font-sans text-ink antialiased;
+}
+
+[id] {
+  scroll-margin-top: 84px;
+}
+
+/* Textura de papel sutil */
+.paper-texture {
+  background-color: #f6f1e7;
+  background-image: radial-gradient(rgba(30, 43, 69, 0.045) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* Rayas rojas horizontales como el círculo del logo */
+.stripes-red {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(166, 58, 63, 0.55) 0px,
+    rgba(166, 58, 63, 0.55) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+/* Línea de puntos del menú de precios */
+.dot-leader {
+  flex: 1;
+  border-bottom: 2px dotted rgba(30, 43, 69, 0.3);
+  transform: translateY(-6px);
+  min-width: 16px;
+}
+
+.eyebrow {
+  @apply font-heading text-sm uppercase tracking-[0.25em] text-barber;
+}
+
+.section-title {
+  @apply font-display text-4xl leading-tight text-navy sm:text-5xl;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-heading text-sm font-medium uppercase tracking-widest transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+}
+.btn-primary {
+  @apply btn bg-barber text-white hover:bg-barber-dark focus-visible:ring-barber;
+}
+.btn-navy {
+  @apply btn bg-navy text-paper hover:bg-navy-soft focus-visible:ring-navy;
+}
+.btn-outline {
+  @apply btn border-2 border-current hover:bg-white/10;
+}
+
+.input {
+  @apply w-full rounded-lg border border-navy/20 bg-white px-4 py-3 text-ink placeholder:text-ink/40 focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/20;
+}
+.label {
+  @apply mb-1.5 block font-heading text-xs uppercase tracking-widest text-navy/80;
+}
+
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
