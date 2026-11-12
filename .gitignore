@@ -12,3 +12,6 @@ public/media
 # Vercel
 .vercel
 .env*.local
+
+# Secretos de producción
+variables-vercel.txt

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Bell, CalendarDays, Camera, ClipboardList, Menu, Tag } from 'lucide-react'
-import { enablePush, isIOS, isStandalone, pushSupported, registerSW } from './push'
+import { enablePush, isIOS, isStandalone, pushSupported, registerSW, useInstallPrompt } from './push'
 
 export type Tab = 'citas' | 'dias' | 'fotos' | 'precios' | 'mas' | 'mensajes'
 
@@ -34,6 +34,7 @@ export default function PanelShell({
   const router = useRouter()
   const [banner, setBanner] = useState<'install' | 'notify' | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  const { canInstall, install } = useInstallPrompt()
 
   // Registrar service worker, numerito del ícono y avisos pendientes
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function PanelShell({
       else nav.clearAppBadge?.()
     } catch {}
 
+    // iPhone: los avisos solo funcionan con la app instalada
     if (isIOS() && !isStandalone()) setBanner('install')
     else if (pushSupported() && Notification.permission === 'default') setBanner('notify')
     else setBanner(null)
@@ -92,6 +94,20 @@ export default function PanelShell({
             <b>Instala la app</b> para recibir avisos de reservas nuevas. Toca aquí para ver cómo.
           </span>
         </Link>
+      )}
+      {canInstall && !isStandalone() && banner !== 'install' && (
+        <button
+          type="button"
+          onClick={async () => {
+            if (await install()) setMsg('📲 ¡Listo! Ya tienes "Mi agenda" en tu pantalla de inicio.')
+          }}
+          className="mx-4 mt-4 flex w-[calc(100%-2rem)] items-center gap-3 rounded-2xl bg-navy p-4 text-left text-white"
+        >
+          <span className="text-2xl">📲</span>
+          <span className="text-[15px] leading-snug">
+            <b>Instalar la app</b> en tu teléfono para abrirla con un toque. Toca aquí.
+          </span>
+        </button>
       )}
       {banner === 'notify' && (
         <button

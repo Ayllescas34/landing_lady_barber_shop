@@ -9,7 +9,7 @@ import {
   setBookingEnabled,
   setInquiryStatus,
 } from '@/app/(panel)/panel/actions'
-import { currentSubscription, enablePush, isIOS, isStandalone, pushSupported } from './push'
+import { currentSubscription, deniedHelp, enablePush, isAndroid, isIOS, isStandalone, pushSupported, useInstallPrompt } from './push'
 import { waTo } from './types'
 
 type Msg = {
@@ -151,13 +151,12 @@ function Notifications({ vapidKey, devices }: { vapidKey: string; devices: numbe
         </a>
       )}
       {state === 'denied' && (
-        <p className="rounded-xl bg-amber-50 p-3 text-[15px] text-amber-900">
-          Los avisos están bloqueados. Ve a <b>Ajustes del iPhone → Notificaciones → Mi agenda</b> y activa “Permitir notificaciones”.
-        </p>
+        <p className="rounded-xl bg-amber-50 p-3 text-[15px] text-amber-900">Los avisos están bloqueados. {deniedHelp()}</p>
       )}
       {state === 'unsupported' && (
         <p className="rounded-xl bg-amber-50 p-3 text-[15px] text-amber-900">
           Este navegador no permite avisos. En iPhone, abre la app desde el ícono de la pantalla de inicio (iOS 16.4 o más nuevo).
+          En Android, ábrela en Google Chrome.
         </p>
       )}
       {msg && <p className="mt-3 rounded-xl bg-paper p-3 text-[15px]">{msg}</p>}
@@ -270,41 +269,74 @@ function Messages({ messages, businessName }: { messages: Msg[]; businessName: s
   )
 }
 
-/* ---------- Instalar en iPhone ---------- */
+/* ---------- Instalar en el teléfono (iPhone y Android) ---------- */
+
+const Step = ({ n, children }: { n: number; children: React.ReactNode }) => (
+  <li className="flex gap-3">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy font-bold text-white">{n}</span>
+    <span>{children}</span>
+  </li>
+)
 
 function Install() {
-  const [installed, setInstalled] = useState(false)
-  useEffect(() => setInstalled(isStandalone()), [])
-  if (installed) return null
+  const [platform, setPlatform] = useState<'ios' | 'android' | 'other' | 'installed'>('other')
+  const { canInstall, install } = useInstallPrompt()
+  useEffect(() => {
+    setPlatform(isStandalone() ? 'installed' : isIOS() ? 'ios' : isAndroid() ? 'android' : 'other')
+  }, [])
+  if (platform === 'installed') return null
+
+  const ios = (
+    <ol className="space-y-4 text-[16px]">
+      <Step n={1}>Abre esta página en <b>Safari</b>.</Step>
+      <Step n={2}>
+        Toca <b>Compartir</b> <Share size={18} className="-mt-1 inline text-blue-600" /> (abajo en el centro).
+      </Step>
+      <Step n={3}>
+        Baja y toca <b>“Agregar a inicio”</b> <SquarePlus size={18} className="-mt-1 inline" />, luego <b>Agregar</b>.
+      </Step>
+      <Step n={4}>
+        Abre <b>“Mi agenda”</b> desde el ícono nuevo, entra con tu correo y toca <b>Activar avisos</b>.
+      </Step>
+    </ol>
+  )
+
+  const android = (
+    <>
+      {canInstall && (
+        <button type="button" onClick={install} className={`${big} mb-4 bg-navy text-white`}>
+          📲 Instalar “Mi agenda”
+        </button>
+      )}
+      <ol className="space-y-4 text-[16px]">
+        <Step n={1}>Abre esta página en <b>Google Chrome</b>.</Step>
+        <Step n={2}>
+          Toca el menú <b>⋮</b> (arriba a la derecha) y elige <b>“Instalar app”</b> o <b>“Agregar a pantalla principal”</b>.
+        </Step>
+        <Step n={3}>
+          Abre <b>“Mi agenda”</b> desde el ícono nuevo y toca <b>Activar avisos</b> → <b>Permitir</b>.
+        </Step>
+      </ol>
+    </>
+  )
+
   return (
     <section id="instalar" className={`${card} scroll-mt-24`}>
-      <h2 className="mb-3 text-lg font-bold text-navy">📲 Instalar en tu iPhone</h2>
-      <ol className="space-y-4 text-[16px]">
-        <li className="flex gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy font-bold text-white">1</span>
-          <span>
-            Abre esta página en <b>Safari</b>.
-          </span>
-        </li>
-        <li className="flex gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy font-bold text-white">2</span>
-          <span>
-            Toca el botón <b>Compartir</b> <Share size={18} className="inline -mt-1 text-blue-600" /> (abajo en el centro).
-          </span>
-        </li>
-        <li className="flex gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy font-bold text-white">3</span>
-          <span>
-            Baja y toca <b>“Agregar a inicio”</b> <SquarePlus size={18} className="inline -mt-1" />, luego <b>Agregar</b>.
-          </span>
-        </li>
-        <li className="flex gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy font-bold text-white">4</span>
-          <span>
-            Abre <b>“Mi agenda”</b> desde el ícono nuevo, entra con tu correo y toca <b>Activar avisos</b>.
-          </span>
-        </li>
-      </ol>
+      <h2 className="mb-3 text-lg font-bold text-navy">📲 Instalar en tu teléfono</h2>
+      {platform === 'ios' && ios}
+      {platform === 'android' && android}
+      {platform === 'other' && (
+        <div className="space-y-5">
+          <div>
+            <p className="mb-2 font-semibold">iPhone</p>
+            {ios}
+          </div>
+          <div>
+            <p className="mb-2 font-semibold">Android</p>
+            {android}
+          </div>
+        </div>
+      )}
     </section>
   )
 }
