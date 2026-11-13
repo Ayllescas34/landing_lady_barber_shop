@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Bell, CalendarDays, Camera, ClipboardList, Menu, Tag } from 'lucide-react'
-import { enablePush, isIOS, isStandalone, pushSupported, registerSW, useInstallPrompt } from './push'
+import { enablePush, isIOS, isStandalone, pushSupported, registerSW, syncPush, useInstallPrompt } from './push'
 
 export type Tab = 'citas' | 'dias' | 'fotos' | 'precios' | 'mas' | 'mensajes'
 
@@ -38,7 +38,7 @@ export default function PanelShell({
 
   // Registrar service worker, numerito del ícono y avisos pendientes
   useEffect(() => {
-    registerSW()
+    registerSW().then(() => syncPush(vapidKey))
     const nav = navigator as Navigator & { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
     try {
       if (pendingCount > 0) nav.setAppBadge?.(pendingCount)
@@ -49,7 +49,22 @@ export default function PanelShell({
     if (isIOS() && !isStandalone()) setBanner('install')
     else if (pushSupported() && Notification.permission === 'default') setBanner('notify')
     else setBanner(null)
-  }, [pendingCount])
+  }, [pendingCount, vapidKey])
+
+  // Si el navegador renovó el registro de avisos, guardarlo de nuevo
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type === 'lb-resubscribe') {
+        try {
+          sessionStorage.removeItem('lb-push-synced')
+        } catch {}
+        syncPush(vapidKey)
+      }
+    }
+    navigator.serviceWorker.addEventListener('message', onMsg)
+    return () => navigator.serviceWorker.removeEventListener('message', onMsg)
+  }, [vapidKey])
 
   // Al volver a la app, actualizar datos
   useEffect(() => {
