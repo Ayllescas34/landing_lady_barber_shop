@@ -142,3 +142,30 @@ export async function currentSubscription() {
   const reg = await navigator.serviceWorker.getRegistration('/panel')
   return (await reg?.pushManager.getSubscription()) || null
 }
+
+/**
+ * Si este teléfono ya dio permiso, se asegura de que su registro de avisos
+ * exista y esté guardado en el servidor. Se llama cada vez que se abre la app,
+ * así los avisos se "reparan" solos si el registro cambió o se borró.
+ */
+export async function syncPush(vapidKey: string) {
+  try {
+    if (!pushSupported() || !vapidKey || Notification.permission !== 'granted') return
+    try {
+      if (sessionStorage.getItem('lb-push-synced')) return
+    } catch {}
+    await registerSW()
+    const reg = await navigator.serviceWorker.ready
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyToBytes(vapidKey) })
+    const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } }
+    const res = await savePushSubscription(json, deviceName())
+    if (res.ok) {
+      try {
+        sessionStorage.setItem('lb-push-synced', '1')
+      } catch {}
+    }
+  } catch {
+    // Sin conexión o permiso cambiado: se reintenta la próxima vez que abra la app
+  }
+}

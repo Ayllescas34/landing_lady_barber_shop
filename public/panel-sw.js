@@ -53,3 +53,12 @@ self.addEventListener('notificationclick', (event) => {
     })(),
   )
 })
+
+// El navegador puede renovar el registro de avisos; la app lo vuelve a guardar al abrirse.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((all) => {
+      all.forEach((c) => c.postMessage({ type: 'lb-resubscribe' }))
+    }),
+  )
+})

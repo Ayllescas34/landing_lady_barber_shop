@@ -52,6 +52,9 @@ export async function notifyAdmins(payload: Payload, msg: PushMessage) {
           const code = (err as { statusCode?: number }).statusCode
           // El teléfono ya no acepta avisos (app borrada o permiso quitado)
           if (code === 404 || code === 410) {
+            payload.logger.warn(
+              `Aviso push: el dispositivo "${s.device}" ya no está registrado (HTTP ${code}); se quitó. Debe volver a abrir la app.`,
+            )
             await payload.delete({ collection: 'push-subscriptions', id: s.id }).catch(() => null)
           } else {
             payload.logger.error({ err }, 'No se pudo enviar aviso push')
@@ -59,6 +62,8 @@ export async function notifyAdmins(payload: Payload, msg: PushMessage) {
         }
       }),
     )
+    payload.logger.info(`Aviso push "${msg.title}": ${sent} enviado(s), ${failed} fallido(s), ${subs.docs.length} dispositivo(s)`)
+    if (!subs.docs.length) payload.logger.warn('Aviso push: no hay ningún teléfono con avisos activados')
     return { sent, failed }
   } catch (err) {
     payload.logger.error({ err }, 'Error enviando avisos push')
